@@ -66,7 +66,7 @@ IAM User는 CodeCommit Git 에서도 사용되기 때문에, IAM User에게 Git�
 2. 좌측탭에서 **[정책]** 선택 후 **[정책 생성]** 버튼을 클릭합니다
 3. 상단에서 **[JSON]** 탭을 선택한 후 아래와 같이 입력합니다.
 
-'''{.json}
+```json
 
 {
     "Version": "2012-10-17",
@@ -90,12 +90,12 @@ IAM User는 CodeCommit Git 에서도 사용되기 때문에, IAM User에게 Git�
     ]
 }
 
-'''
+```
 
 위 JSON 정책은 특정 브런치에 대해 Git Push Event 를 Deny 하는 정책입니다.
 실제 값으로 채울 경우 아래와 같이 만들어집니다.
 
-'''{.json}
+```json
 
 {
     "Version": "2012-10-17",
@@ -119,7 +119,7 @@ IAM User는 CodeCommit Git 에서도 사용되기 때문에, IAM User에게 Git�
     ]
 }
 
-'''
+```
 
 4. JSON을 통해 정책을 모두 입력했다면, **[정책 검토]** 를 클릭합니다.
 5. 정책 이름을 입력한 후 **[정책 생성]** 을 클릭합니다.
