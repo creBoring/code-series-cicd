@@ -41,12 +41,12 @@ Architecture Overview
 CodeCommit은 원격 접속이 가능한 User를 IAM User를 통해 제공하고 있습니다.<br>
 CodeCommit에 접근하기 위한 방법으로는 HTTPS 방식과 SSH 방식이 있는데, 두 Credential 모두 IAM User에 등록 및 할당받을 수 있습니다.
 
-#### IAM User 생성
+#### [IAM User 생성]
 
 >IAM 사용자 생성
 >https://docs.aws.amazon.com/ko_kr/IAM/latest/UserGuide/id_users_create.html#id_users_create_console
 
-#### IAM User에 권한 부여
+#### [IAM User에 권한 부여]
 
 IAM User는 CodeCommit Git 에서도 사용되기 때문에, IAM User에게 Git과 관련된 권한이 없으면 아무런 동작도 실행할 수 없습니다.<br>
 따라서 아래 절차를 통해 CodeCommit 관련 권한을 부여하고, 유저별로 특정 권한을 Deny 해보도록 하겠습니다.
@@ -59,7 +59,7 @@ IAM User는 CodeCommit Git 에서도 사용되기 때문에, IAM User에게 Git�
 
 위 작업을 통해 생성 된 IAM User에 CodeCommit 레포지토리에 commit, push 등 모든 작업을 할 수 있는 권한을 부여 했습니다.
 
-#### IAM User에 권한 축소
+#### [IAM User에 권한 축소]
 위 단계에서 권한을 광범위하게 부여했기 때문에, 특정 작업에 대해서나 특정 브런치에 대해 권한을 축소시키고 싶다면, 아래 절차를 통해 Deny 권한을 만들어 IAM User에 부여해주면 됩니다.
 
 1. AWS Management Console 좌측 상단에 있는 **[Services]** 를 선택하고 검색창에서 iam 을 검색하고 [IAM] 을 선택합니다
