@@ -2,7 +2,7 @@ Code 시리즈를 이용한 CI/CD 구성
 ==================
 Architecture Overview
 ------------------
-<img src="./md-img/architecture.png">
+<img src="./md-img/architecture.PNG">
 
 시작하기 전에
 ------------------
