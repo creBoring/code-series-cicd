@@ -17,6 +17,7 @@ Architecture Overview
 1. **CodeCommit**<br>
   1-1. CodeCommit 레포지토리 생성 및 설정<br>
   1-2. SVN 데이터 Git으로 이전<br>
+  1-3. CodeCommit에 Push<br>
 2. **배포 시나리오 도출**<br>
 3. **CodeBuild**<br>
   3-1. buildspec.yml 파일 생성<br>
@@ -129,6 +130,12 @@ IAM User는 CodeCommit Git 에서도 사용되기 때문에, IAM User에게 Git�
 
 이 과정에서 기존 SVN에서 commit 되었던 내역들이 유지되지 않습니다. 이 점을 유의하여 기존 history 데이터를 별도로 보관하는 것을 권해드립니다.
 
+## 1-3. CodeCommit에 Push
+
+현재 예제를 통해 진행하시는 경우, 반드시 CodeCommit에 프로젝트가 push 되어있어야 합니다.
+
+만들어진 프로젝트에 대해 git commit을 진행하시고 CodeCommit 에 push 해주시기 바랍니다.
+
 --------------------
 
 # 2. 배포 시나리오 도출
@@ -137,8 +144,8 @@ CI/CD 에서 빌드 과정과 배포 과정을 자동화 하기 위해서는 배
 
 실제로 아무것도 없는 EC2 인스턴스를 만든 후, 해당 인스턴스에 서비스를 배포하는 과정에서 모든 커맨드들을 기록해야 합니다.
 
-해당 절차들이 모두 빌드와 배포 절차에 포함되어야 합니다.<br>
-기록한 커맨드를 Build와 Deploy 절차로 나눈 후 각각의 단계에서 수행해야 합니다.
+기록된 커맨드들은 분석하여 빌드와 배포 절차에 적절히 분배해야합니다.<br>
+분배 작업이 완료되면, 추후 appspec.yml 파일과 buildspec.yml 파일을 생성할 때 적절한 위치에 기입해줍니다.
 
 -------------------
 
@@ -210,7 +217,23 @@ artifacts에는 다음 단계인 deploy 즉, CodeDeploy에 넘겨줄 산출물�
 '2. 배포 시나리오 도출' 단계에서 도출 된 Deploy 커맨드들을 CodeDeploy를 통해 수행해야 합니다.<br>
 또한 배포 방식을 결정해야 합니다. (Blue/Green, Rolling, ...)
 
-## 3-1. appspec.yml 파일 생성
+## 4-0. 사전 준비 사항
+
+CodeDeploy 설정을 하기에 앞서, CodeDeploy는 EC2 인스턴스와 Agent 방식으로 통신합니다.<br>
+그렇기 때문에, 반드시 사전에 EC2 인스턴스에 **CodeDeploy Agent** 를 설치해야합니다.
+
+CodeDeploy Agent를 설치하려는 EC2 인스턴스의 OS에 맞게 아래 공식문서를 참고하여 Agent를 설치하고 동작 여부를 확인해주시기 바랍니다.
+
+>Code Deploy Agent 설치<br>
+https://docs.aws.amazon.com/ko_kr/codedeploy/latest/userguide/codedeploy-agent-operations-install.html
+
+Linux 계열의 인스턴스의 경우 아래 명령어를 통해 Agent 동작 여부를 확인할 수 있습니다.
+
+```sh
+sudo service codedeploy-agent status
+```
+
+## 4-1. appspec.yml 파일 생성
 
 appspec 양식
 
@@ -222,18 +245,64 @@ files:
     destination: /tmp
 ```
 
-## 3-2. 배포 방법 설정 및 대상 지정
+실제 appspec에는 위 예제보다 훨씬 많은 항목들이 포함됩니다.<br>
+위 예제에서는 build 과정에서의 산출물(source)을 어떤 위치(destination)에 배포할지에 대해서만 지정되어 있기 때문에, 더 디테일한 설정을 위해서는 아래 공식문서를 참고하시기 바랍니다.
 
-CodeDeploy를 위해선 codedeploy agent 설치가 필요
+>Appspec 파일 참조<br>
+https://docs.aws.amazon.com/ko_kr/codedeploy/latest/userguide/reference-appspec-file.html
 
->Code Deploy Agent 설치<br>
-https://docs.aws.amazon.com/ko_kr/codedeploy/latest/userguide/codedeploy-agent-operations-install.html
+## 4-2. 배포 방법 설정 및 대상 지정
 
-어플리케이션과 deploy group 생성이 필요합니다.
+CodeDeploy 배포를 실행시키기 위해서는 배포를 할 대상인 '배포 그룹'과 배포가 되는 어플리케이션 집합체가 필요합니다.<br>
+어플리케이션을 만든 후 어플리케이션에 배포 그룹을 추가하고, 어플리케이션에서 배포를 실행할 수 있습니다.
 
-그 과정에서 deploy group에 role 부여가 필요 (CodeDeploy가 배포를 수행하기 위해 필요한 권한들)<br>
-권한은 'AWSCodeDeployRole'
+### 어플리케이션 생성
+
+1. AWS Management Console 좌측 상단에 있는 **[Services]** 를 선택하고 검색창에서 codedeploy 를 검색하고 **[CodeDeploy]** 를 선택합니다.
+2. 좌측탭에서 **[애플리케이션]** 선택 후 **[애플리케이션 생성]** 을 클릭합니다
+3. 애플리케이션 이름과 배포할 대상의 플랫폼을 선택한 후 **[애플리케이션 생성]** 버튼을 클릭합니다
+
+### 배포 그룹 생성
+
+배포 그룹을 생성할 때, CodeDeploy가 Build된 아티팩트를 EC2 인스턴스에 배포할 수 있는 권한이 필요합니다.<br>
+이 권한은 IAM Role을 통해 부여해줘야 하며, 배포 그룹을 생성하는 도중에 생성이 불가능하기 때문에 사전에 만들어야 합니다.
+
+1. AWS Management Console 좌측 상단에 있는 **[Services]** 를 선택하고 검색창에서 iam 을 검색하고 **[IAM]** 을 선택합니다.
+2. 좌측탭에서 **[역할]** 선택 후 **[역할 만들기]** 를 클릭합니다
+3. '이 역할을 사용할 서비스'로는 CodeDeploy -> CodeDeploy 를 선택한 후 **[다음:권한]** 을 클릭합니다
+4. 이어서 [다음:태그] 를 클릭하고, [다음:검토] 를 클릭하여 넘어갑니다.
+5. 역할 이름을 입력한 후 **[역할 만들기]** 를 클릭합니다
+
+역할이 다 만들어졌다면, 다시 어플리케이션 상세 페이지로 돌아가 배포 그룹을 생성합니다.
+
+1. AWS Management Console 좌측 상단에 있는 **[Services]** 를 선택하고 검색창에서 codedeploy 를 검색하고 **[CodeDeploy]** 를 선택합니다.
+2. 좌측탭에서 **[애플리케이션]** 선택 후, 방금 전 생성했었던 어플리케이션을 선택하고 **[세부 정보 보기]** 를 클릭합니다.
+3. 상세 페이지로 이동되었다면, 페이지의 **[배포 그룹]** 탭에서 **[배포 그룹 생성]** 을 클릭합니다
+4. 아래와 같이 순차적으로 입력합니다.
+
+- **배포 그룹 이름** : 배포 그룹명
+- **서비스 역할** : 방금 만들었던 IAM Role을 선택해줍니다.
+- **배포 유형** : 어플리케이션 배포 방식을 결정합니다. 배포하려는 타겟에 바로 배포할 수도 있으며, blue/green 방식을 이용해 새로운 인스턴스를 만들어 교체할 수도 있습니다.<br>
+(진행중인 예제에서는 '현재 위치'를 선택하고 진행합니다)
+- **환경 구성** : 배포가 될 대상을 선택하는 방법을 결정합니다.<br>
+AutoScaling 그룹을 선택하여, 해당 그룹 내에 속한 모든 인스턴스가 배포되도록 설정할 수도 있으며, 태그값을 이용해 선택할 수도 있습니다.
+- **배포 설정** : 배포 대상에 배포를 진행할 때 순차적으로 진행할 것인지, 모두 한번에 배포할 것인지 선택합니다.
+- **로드밸런서** : 배포할 대상이 로드밸런서에 속해있다면 선택합니다. 배포 진행 전 로드밸런서에서 해당 서버로 트래픽이 흐르는 것을 사전에 차단하고, 배포가 완료된 이후에 다시 트래픽이 흐르도록 제어해줍니다.
+
+5. 모두 입력되었다면, **[배포 그룹 생성]** 을 클릭합니다.
 
 ---------------------
 
 # 5. CodePipeline
+
+위 과정들을 통해 CI/CD 시나리오의 각 스테이지들이 모두 구성되었습니다.<br>
+마지막으로 CodePipeline을 만들어 각 단계별로 스테이지들이 트리깅될 수 있도록 구성해야합니다.
+
+1. AWS Management Console 좌측 상단에 있는 **[Services]** 를 선택하고 검색창에서 codepipeline 을 검색하고 **[CodePipeline]** 을 선택합니다.
+2. 좌측탭에서 **[파이프라인]** 선택 후, **[파이프라인 생성]** 을 클릭합니다.
+3. 파이프라인 이름을 입력한 후 [다음] 을 클릭합니다
+4. 앞으로 나오는 각 단계마다 지금까지 생성했었던 스테이지들을 선택하시고 **[다음]** 버튼을 클릭해 넘어가줍니다.
+5. 다 선택되었다면 [파이프라인 생성] 을 클릭 해 파이프라인을 만들어줍니다.
+
+파이프라인이 만들어지면 자동으로 파이프라인이 작동됩니다.<br>
+그 이후에는 커밋이 CodeCommit에 Push 될 때 마다 트리깅되어 파이프라인이 작동하게 됩니다.
